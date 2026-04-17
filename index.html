@@ -1,0 +1,714 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Free Location Map</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+        integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            font-family: "Manrope", sans-serif;
+            background: #f3f5f7;
+            color: #1f2937;
+        }
+
+        .page {
+            max-width: 1240px;
+            margin: 0 auto;
+            padding: 24px;
+        }
+
+        .header {
+            margin-bottom: 18px;
+        }
+
+        .header h1 {
+            margin: 0 0 8px;
+            font-size: clamp(1.8rem, 3vw, 2.6rem);
+            font-weight: 800;
+        }
+
+        .header p {
+            margin: 0;
+            color: #5b6472;
+            line-height: 1.6;
+            max-width: 760px;
+        }
+
+        .map-card {
+            overflow: hidden;
+            border: 1px solid #dde3ea;
+            border-radius: 20px;
+            background: #ffffff;
+            box-shadow: 0 16px 36px rgba(15, 23, 42, 0.08);
+        }
+
+        .filters {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin: 0 0 18px;
+        }
+
+        .filter-button {
+            padding: 10px 14px;
+            border: 1px solid #d7dee7;
+            border-radius: 999px;
+            background: #ffffff;
+            color: #344054;
+            font: inherit;
+            font-size: 0.92rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease, transform 0.2s ease;
+        }
+
+        .filter-button:hover {
+            transform: translateY(-1px);
+            border-color: #bbc7d6;
+        }
+
+        .filter-button.active {
+            color: #ffffff;
+        }
+
+        .filter-button.employers.active {
+            background: #0f766e;
+            border-color: #0f766e;
+        }
+
+        .filter-button.residences.active {
+            background: #7c5c49;
+            border-color: #7c5c49;
+        }
+
+        .filter-button.parks.active {
+            background: #4d7c0f;
+            border-color: #4d7c0f;
+        }
+
+        .filter-button.nightlife.active {
+            background: #7c3aed;
+            border-color: #7c3aed;
+        }
+
+        .filter-button.restaurants.active {
+            background: #ea580c;
+            border-color: #ea580c;
+        }
+
+        .filter-button.education.active {
+            background: #2563eb;
+            border-color: #2563eb;
+        }
+
+        .filter-button.hospitals.active {
+            background: #dc2626;
+            border-color: #dc2626;
+        }
+
+        .content-grid {
+            margin-top: 18px;
+        }
+
+        #map {
+            height: 600px;
+            width: 100%;
+        }
+
+        .custom-pin {
+            position: relative;
+            width: 24px;
+            height: 24px;
+            border: 3px solid #ffffff;
+            border-radius: 50% 50% 50% 0;
+            transform: rotate(-45deg);
+            box-shadow: 0 6px 14px rgba(0, 0, 0, 0.22);
+        }
+
+        .custom-pin::after {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 8px;
+            height: 8px;
+            content: "";
+            background: #ffffff;
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+        }
+
+        .custom-pin.home::after {
+            display: none;
+        }
+
+        .home-icon {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 12px;
+            height: 12px;
+            fill: #ffffff;
+            transform: translate(-50%, -50%) rotate(45deg);
+        }
+
+        .custom-pin.orange {
+            background: #f59e0b;
+        }
+
+        .custom-pin.home {
+            width: 32px;
+            height: 32px;
+            border-width: 4px;
+            background: #7c5c49;
+        }
+
+        .custom-pin.teal {
+            background: #0f766e;
+        }
+
+        .custom-pin.green {
+            background: #4d7c0f;
+        }
+
+        .custom-pin.purple {
+            background: #7c3aed;
+        }
+
+        .custom-pin.blue {
+            background: #2563eb;
+        }
+
+        .custom-pin.red {
+            background: #dc2626;
+        }
+
+        .pin-wrap {
+            width: 24px;
+            height: 34px;
+        }
+
+        .pin-wrap.home-wrap {
+            width: 32px;
+            height: 44px;
+        }
+
+        .leaflet-popup-content {
+            margin: 10px 12px;
+            font-family: "Manrope", sans-serif;
+        }
+
+        .basemap-control {
+            position: relative;
+        }
+
+        .basemap-toggle {
+            display: grid;
+            place-items: center;
+            width: 38px;
+            height: 38px;
+            border: 1px solid #cfd8e3;
+            border-radius: 10px;
+            background: #ffffff;
+            color: #334155;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(15, 23, 42, 0.14);
+            transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+        }
+
+        .basemap-toggle:hover {
+            transform: translateY(-1px);
+            border-color: #b8c4d4;
+            box-shadow: 0 6px 14px rgba(15, 23, 42, 0.2);
+        }
+
+        .basemap-toggle svg {
+            width: 18px;
+            height: 18px;
+        }
+
+        .basemap-panel {
+            position: absolute;
+            top: 46px;
+            right: 0;
+            min-width: 180px;
+            padding: 6px;
+            border: 1px solid #d7dee7;
+            border-radius: 12px;
+            background: #ffffff;
+            box-shadow: 0 12px 28px rgba(15, 23, 42, 0.16);
+            opacity: 0;
+            visibility: hidden;
+            transform: translateY(-4px);
+            transition: opacity 0.15s ease, transform 0.15s ease, visibility 0.15s ease;
+        }
+
+        .basemap-control.open .basemap-panel {
+            opacity: 1;
+            visibility: visible;
+            transform: translateY(0);
+        }
+
+        .basemap-option {
+            width: 100%;
+            padding: 9px 10px;
+            border: 0;
+            border-radius: 8px;
+            background: transparent;
+            color: #334155;
+            font: inherit;
+            font-size: 0.9rem;
+            font-weight: 700;
+            text-align: left;
+            cursor: pointer;
+        }
+
+        .basemap-option:hover {
+            background: #eef2f7;
+        }
+
+        .basemap-option.active {
+            background: #dbeafe;
+            color: #1d4ed8;
+        }
+
+        .popup-title {
+            display: block;
+            margin-bottom: 4px;
+            font-weight: 800;
+        }
+
+        @media (max-width: 768px) {
+            .page {
+                padding: 16px;
+            }
+
+            #map {
+                height: 460px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="page">
+
+
+        <div class="filters" id="filters"></div>
+
+        <div class="content-grid">
+            <div class="map-card">
+                <div id="map"></div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+        integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    <script>
+        const map = L.map("map", {
+            zoomControl: true,
+            scrollWheelZoom: true
+        }).setView([34.1478, -118.1445], 11);
+
+        const baseLayers = {
+            street: L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+                maxZoom: 19,
+                attribution: "&copy; OpenStreetMap contributors"
+            }),
+            light: L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", {
+                maxZoom: 20,
+                attribution: "&copy; OpenStreetMap contributors &copy; CARTO"
+            }),
+            dark: L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", {
+                maxZoom: 20,
+                attribution: "&copy; OpenStreetMap contributors &copy; CARTO"
+            }),
+            satellite: L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", {
+                maxZoom: 19,
+                attribution: "Tiles &copy; Esri"
+            })
+        };
+
+        const baseLayerOptions = [
+            { id: "street", label: "Street" },
+            { id: "light", label: "Light" },
+            { id: "dark", label: "Dark" },
+            { id: "satellite", label: "Satellite" }
+        ];
+
+        let activeBaseLayerId = "street";
+        let activeBaseLayer = baseLayers[activeBaseLayerId];
+        activeBaseLayer.addTo(map);
+
+        function updateBaseLayerButtons() {
+            document.querySelectorAll(".basemap-option").forEach((button) => {
+                button.classList.toggle("active", button.dataset.layerId === activeBaseLayerId);
+            });
+        }
+
+        function switchBaseLayer(layerId) {
+            if (!baseLayers[layerId] || layerId === activeBaseLayerId) {
+                return;
+            }
+
+            map.removeLayer(activeBaseLayer);
+            activeBaseLayerId = layerId;
+            activeBaseLayer = baseLayers[layerId];
+            activeBaseLayer.addTo(map);
+            updateBaseLayerButtons();
+        }
+
+        function addBaseLayerControl() {
+            const baseMapControl = L.control({ position: "topright" });
+
+            baseMapControl.onAdd = function () {
+                const container = L.DomUtil.create("div", "leaflet-control basemap-control");
+                container.innerHTML = `
+                    <button type="button" class="basemap-toggle" aria-label="Toggle map layers" title="Map layers">
+                        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                            <path fill="currentColor" d="M12 2 1.8 7.1 12 12.2l8.9-4.4v8.4L12 21l-8.9-4.8V8.7l-1.3.6V17L12 22l10.2-5V7L12 2Zm0 8.8-7.1-3.6L12 3.8l7.1 3.4L12 10.8Z"/>
+                        </svg>
+                    </button>
+                    <div class="basemap-panel" role="menu" aria-label="Basemap layers">
+                        ${baseLayerOptions.map((option) => `
+                            <button
+                                type="button"
+                                class="basemap-option ${option.id === activeBaseLayerId ? "active" : ""}"
+                                data-layer-id="${option.id}"
+                                role="menuitemradio"
+                                aria-checked="${option.id === activeBaseLayerId ? "true" : "false"}"
+                            >
+                                ${option.label}
+                            </button>
+                        `).join("")}
+                    </div>
+                `;
+
+                const toggleButton = container.querySelector(".basemap-toggle");
+                const optionButtons = container.querySelectorAll(".basemap-option");
+
+                toggleButton.addEventListener("click", (event) => {
+                    event.stopPropagation();
+                    container.classList.toggle("open");
+                });
+
+                optionButtons.forEach((button) => {
+                    button.addEventListener("click", () => {
+                        switchBaseLayer(button.dataset.layerId);
+                        optionButtons.forEach((option) => {
+                            option.setAttribute("aria-checked", option.dataset.layerId === activeBaseLayerId ? "true" : "false");
+                        });
+                        container.classList.remove("open");
+                    });
+                });
+
+                map.on("click", () => {
+                    container.classList.remove("open");
+                });
+
+                L.DomEvent.disableClickPropagation(container);
+                return container;
+            };
+
+            baseMapControl.addTo(map);
+        }
+
+        addBaseLayerControl();
+
+        function createIcon(type) {
+            const isHome = type === "home";
+            const pinInner = type === "home"
+                ? `<div class="custom-pin ${type}"><svg class="home-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 3.2 3.8 9.7a1 1 0 0 0-.4.8v9.8a1 1 0 0 0 1 1h5.6a1 1 0 0 0 1-1v-5.1h2v5.1a1 1 0 0 0 1 1h5.6a1 1 0 0 0 1-1v-9.8a1 1 0 0 0-.4-.8L12 3.2Z"/></svg></div>`
+                : `<div class="custom-pin ${type}"></div>`;
+
+            return L.divIcon({
+                className: "",
+                html: `<div class="pin-wrap ${isHome ? "home-wrap" : ""}">${pinInner}</div>`,
+                iconSize: isHome ? [32, 44] : [24, 34],
+                iconAnchor: isHome ? [16, 44] : [12, 34],
+                popupAnchor: isHome ? [0, -38] : [0, -30]
+            });
+        }
+
+        const categories = [
+            {
+                id: "major-employers",
+                label: "Major Employers",
+                className: "employers",
+                icon: "teal",
+                description: "Major job centers and institutional employers from the Google My Map.",
+                items: [
+                    { name: "CalTech", coords: [34.1382259, -118.1297322] },
+                    { name: "City of Hope Comprehensive Cancer Center - Duarte", coords: [34.1291938, -117.9728148] },
+                    { name: "Dreamworks Animation LLC", coords: [34.1571922, -118.2850036] },
+                    { name: "Jet Propulsion Laboratory", coords: [34.2012992, -118.1713944] },
+                    { name: "NBCUniversal", coords: [34.1383871, -118.3618662] },
+                    { name: "Kaiser Permanente Los Angeles Medical Center", coords: [34.0983837, -118.2939125] },
+                    { name: "ServiceTitan", coords: [34.1581029, -118.2544439] },
+                    { name: "University of Southern California Health Sciences Campus", coords: [34.0594389, -118.2070672] },
+                    { name: "Warner Bros. Entertainment Inc.", coords: [34.1486493, -118.33861] }
+                ]
+            },
+            {
+                id: "shanti-residences",
+                label: "SHANTI RESIDENCES",
+                className: "residences",
+                icon: "home",
+                description: "Primary residence marker from the shared map.",
+                items: [
+                    { name: "1525 Colorado Blvd", coords: [34.1399827, -118.1990018] }
+                ]
+            },
+            {
+                id: "parks-recreation",
+                label: "Parks & Recreation",
+                className: "parks",
+                icon: "green",
+                description: "Regional parks and recreation destinations.",
+                items: [
+                    { name: "Elysian Park", coords: [34.0795792, -118.2361616] },
+                    { name: "Griffith Park", coords: [34.1365544, -118.2942] },
+                    { name: "Ernest E. Debs Regional Park", coords: [34.0910562, -118.1935615] },
+                    { name: "Hahamongna Watershed Park", coords: [34.1925292, -118.1768178] },
+                    { name: "Arroyo Seco Park", coords: [34.1109709, -118.1783072] },
+                    { name: "Brand Park", coords: [34.1826398, -118.2765284] },
+                    { name: "Descanso Gardens", coords: [34.2011138, -118.2097236] },
+                    { name: "La Tuna Canyon Park", coords: [34.2283699, -118.3082034] }
+                ]
+            },
+            {
+                id: "nightlife-social",
+                label: "Nightlife & Social Scene",
+                className: "nightlife",
+                icon: "purple",
+                description: "Nightlife, entertainment, and neighborhood social hubs.",
+                items: [
+                    { name: "Highland Park Bowl", coords: [34.1093965, -118.1935786] },
+                    { name: "The Gold Line Train Rail", coords: [34.1350977, -118.2530042] },
+                    { name: "The Greek Theatre", coords: [34.1195315, -118.2962896] },
+                    { name: "Glendale", coords: [34.1463674, -118.2488703] },
+                    { name: "Pasadena", coords: [34.1476527, -118.144302] },
+                    { name: "Arcadia", coords: [34.1397292, -118.0353449] },
+                    { name: "Alhambra", coords: [34.0927549, -118.1268211] },
+                    { name: "DTLA Arts District", coords: [34.0443569, -118.2367605] },
+                    { name: "STAPLES Center", coords: [34.0430058, -118.2673597] },
+                    { name: "Chinatown", coords: [34.0616322, -118.2363171] },
+                    { name: "Atwater Village", coords: [34.1162065, -118.2627862] },
+                    { name: "Silver Lake", coords: [34.082936, -118.2733457] },
+                    { name: "Thai Town", coords: [34.1018097, -118.3035723] },
+                    { name: "Hollywood", coords: [34.0907315, -118.3266146] },
+                    { name: "La Crescenta-Montrose", coords: [34.2286202, -118.2350674] },
+                    { name: "Burbank", coords: [34.1820605, -118.3074827] }
+                ]
+            },
+            {
+                id: "restaurants",
+                label: "Restaurants",
+                className: "restaurants",
+                icon: "orange",
+                description: "Dining destinations pulled from the shared map.",
+                items: [
+                    { name: "Bestia", coords: [34.0338338, -118.2293287] },
+                    { name: "Bavel", coords: [34.041487, -118.2329313] },
+                    { name: "Osteria Mozza", coords: [34.083214, -118.33897] },
+                    { name: "Majordomo", coords: [34.0690822, -118.2261672] },
+                    { name: "Yang's Kitchen", coords: [34.0943735, -118.1281888] },
+                    { name: "Hippo", coords: [34.1106445, -118.1903416] },
+                    { name: "Dunsmoor", coords: [34.1159968, -118.2359552] },
+                    { name: "Found Oyster", coords: [34.0952365, -118.295817] },
+                    { name: "Union Restaurant", coords: [34.1469979, -118.1496377] },
+                    { name: "Raffi's Place", coords: [34.1465559, -118.2534519] },
+                    { name: "Arroyo Chop House", coords: [34.1365082, -118.147135] },
+                    { name: "Celestino Ristorante & Bar", coords: [34.143359, -118.132506] },
+                    { name: "SUGARFISH by sushi nozawa", coords: [34.0473777, -118.2570203] },
+                    { name: "KazuNori: The Original Hand Roll Bar", coords: [34.1460517, -118.1373233] },
+                    { name: "The Factory Kitchen", coords: [34.0389831, -118.2358783] },
+                    { name: "Providence", coords: [34.0836697, -118.3300251] },
+                    { name: "Bourbon Steak by Michael Mina", coords: [34.1427886, -118.2553359] },
+                    { name: "Din Tai Fung", coords: [34.144386, -118.2583313] },
+                    { name: "Frida Mexican Cuisine", coords: [34.1441507, -118.2552974] },
+                    { name: "Casa Córdoba: Best Spanish Tapas & Paella | Montrose Restaurant & Bar | Live Music", coords: [34.2061544, -118.2292037] },
+                    { name: "Little Beast Restaurant", coords: [34.1389214, -118.1980281] },
+                    { name: "Granville", coords: [34.181135, -118.309326] }
+                ]
+            },
+            {
+                id: "education",
+                label: "Educational Institutions",
+                className: "education",
+                icon: "blue",
+                description: "Schools, colleges, universities, and seminaries.",
+                items: [
+                    { name: "California Institute of Technology", coords: [34.1376576, -118.125269] },
+                    { name: "ArtCenter College of Design", coords: [34.1680011, -118.1844544] },
+                    { name: "ArtCenter College of Design South Campus", coords: [34.1279787, -118.1476552] },
+                    { name: "Pasadena City College", coords: [34.1439461, -118.118761] },
+                    { name: "Occidental College", coords: [34.12736, -118.2104777] },
+                    { name: "University of Southern California", coords: [34.0223519, -118.285117] },
+                    { name: "University of Los Angeles", coords: [34.0841731, -118.2953018] },
+                    { name: "Glendale Community College", coords: [34.16636, -118.2281216] },
+                    { name: "UCLA Downtown", coords: [34.048347, -118.249225] },
+                    { name: "USC Gould School of Law", coords: [34.0186751, -118.2842727] },
+                    { name: "Loyola Law School, Los Angeles", coords: [34.048889, -118.2710985] },
+                    { name: "Fuller Theological Seminary", coords: [34.1482032, -118.1404425] }
+                ]
+            },
+            {
+                id: "hospitals",
+                label: "Hospitals & Medical Centers",
+                className: "hospitals",
+                icon: "red",
+                description: "Hospitals, cancer centers, and major medical facilities.",
+                items: [
+                    { name: "Huntington Hospital", coords: [34.1336946, -118.1522279] },
+                    { name: "Keck Hospital of USC", coords: [34.0625762, -118.2018351] },
+                    { name: "Adventist Health Glendale - Heliport", coords: [34.1503362, -118.2302419] },
+                    { name: "USC Norris Comprehensive Cancer Center", coords: [34.0615104, -118.2053422] },
+                    { name: "Kaiser Permanente Los Angeles Medical Center", coords: [34.0983837, -118.2939125] },
+                    { name: "City of Hope Helford Hospital", coords: [34.132163, -117.9709616] }
+                ]
+            }
+        ];
+
+        const filtersElement = document.getElementById("filters");
+        const markerLayer = L.layerGroup().addTo(map);
+        let activeCategoryId = categories[0].id;
+        const shantiCategory = categories.find((category) => category.id === "shanti-residences");
+        const shantiBase = shantiCategory && shantiCategory.items.length ? shantiCategory.items[0] : null;
+
+        function formatCoords(coords) {
+            return `${coords[0].toFixed(6)}, ${coords[1].toFixed(6)}`;
+        }
+
+        function getGoogleMapsLink(coords, name) {
+            const query = encodeURIComponent(`${coords[0]},${coords[1]} (${name})`);
+            return `https://www.google.com/maps/search/?api=1&query=${query}`;
+        }
+
+        function getDistanceKm(fromCoords, toCoords) {
+            const toRadians = (degrees) => degrees * (Math.PI / 180);
+            const earthRadiusKm = 6371;
+            const lat1 = toRadians(fromCoords[0]);
+            const lon1 = toRadians(fromCoords[1]);
+            const lat2 = toRadians(toCoords[0]);
+            const lon2 = toRadians(toCoords[1]);
+            const deltaLat = lat2 - lat1;
+            const deltaLon = lon2 - lon1;
+
+            const haversine = Math.sin(deltaLat / 2) ** 2
+                + Math.cos(lat1) * Math.cos(lat2) * Math.sin(deltaLon / 2) ** 2;
+            const centralAngle = 2 * Math.atan2(Math.sqrt(haversine), Math.sqrt(1 - haversine));
+            return earthRadiusKm * centralAngle;
+        }
+
+        function formatEstimatedDrive(distanceKm) {
+            const averageCitySpeedKmh = 32;
+            const minutes = Math.max(1, Math.round((distanceKm / averageCitySpeedKmh) * 60));
+            return `${minutes} min`;
+        }
+
+        function renderFilters() {
+            const visibleFilters = categories.filter((category) => category.id !== "shanti-residences");
+
+            filtersElement.innerHTML = visibleFilters.map((category) => `
+                <button
+                    type="button"
+                    class="filter-button ${category.className} ${category.id === activeCategoryId ? "active" : ""}"
+                    data-category-id="${category.id}"
+                >
+                    ${category.label}
+                </button>
+            `).join("");
+
+            filtersElement.querySelectorAll(".filter-button").forEach((button) => {
+                button.addEventListener("click", () => {
+                    activeCategoryId = button.dataset.categoryId;
+                    updateView();
+                });
+            });
+        }
+
+        function renderMarkers(category) {
+            markerLayer.clearLayers();
+
+            const renderItems = [];
+            if (shantiBase) {
+                renderItems.push({
+                    ...shantiBase,
+                    icon: "home",
+                    zIndexOffset: 2000,
+                    popup: `
+                        <span class="popup-title">SHANTI RESIDENCES</span>
+                        Base location <br>
+                        ${formatCoords(shantiBase.coords)}<br>
+                        <a href="${getGoogleMapsLink(shantiBase.coords, "SHANTI RESIDENCES")}" target="_blank" rel="noopener noreferrer">Open in Google Maps</a>
+                    `
+                });
+            }
+
+            category.items.forEach((item) => {
+                const isShantiItem = shantiBase
+                    && item.name === shantiBase.name
+                    && item.coords[0] === shantiBase.coords[0]
+                    && item.coords[1] === shantiBase.coords[1];
+
+                if (isShantiItem) {
+                    return;
+                }
+
+                const distanceKm = shantiBase ? getDistanceKm(shantiBase.coords, item.coords) : 0;
+                const estimatedDrive = formatEstimatedDrive(distanceKm);
+                renderItems.push({
+                    ...item,
+                    icon: category.icon,
+                    zIndexOffset: 0,
+                    popup: `
+                        <span class="popup-title">${item.name}</span>
+                        ${category.label}<br>
+                        ${formatCoords(item.coords)}<br>
+                        🚗 ${estimatedDrive} (${distanceKm.toFixed(1)} km<br>
+                        <a href="${getGoogleMapsLink(item.coords, item.name)}" target="_blank" rel="noopener noreferrer">Open in Google Maps</a>
+                    `
+                });
+            });
+
+            const markers = renderItems.map((item) => {
+                const marker = L.marker(item.coords, {
+                    icon: createIcon(item.icon),
+                    zIndexOffset: item.zIndexOffset
+                });
+                marker.bindPopup(`
+                    ${item.popup}
+                `);
+                marker.addTo(markerLayer);
+                return marker;
+            });
+
+            if (markers.length) {
+                const bounds = L.latLngBounds(renderItems.map((item) => item.coords));
+                map.fitBounds(bounds, { padding: [40, 40] });
+            }
+        }
+
+        function updateView() {
+            const category = categories.find((entry) => entry.id === activeCategoryId) || categories[0];
+            renderFilters();
+            renderMarkers(category);
+        }
+
+        updateView();
+    </script>
+</body>
+
+</html>
