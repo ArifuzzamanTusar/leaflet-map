@@ -709,6 +709,19 @@
 
         updateView();
     </script>
+
+    <script>
+        // Run this after the map/content has fully rendered
+        window.onload = function () {
+            const height = document.documentElement.scrollHeight;
+            window.parent.postMessage({ iframeHeight: height }, '*');
+        };
+
+        // Optional: If the map changes size dynamically, you might need a ResizeObserver
+        new ResizeObserver(() => {
+            window.parent.postMessage({ iframeHeight: document.documentElement.scrollHeight }, '*');
+        }).observe(document.body);
+    </script>
 </body>
 
 </html>
